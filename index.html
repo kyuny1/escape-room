@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>역사 방탈출 · 생활 기록 복원 작전</title>
+
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --card: #ffffff;
+      --ink: #17243c;
+      --muted: #59677e;
+      --line: #dce3ef;
+      --primary: #344ed2;
+      --good: #17663b;
+      --bad: #a42836;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, "Noto Sans KR", sans-serif;
+      line-height: 1.6;
+    }
+
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    [hidden] { display: none !important; }
+
+    header {
+      padding: 28px 20px;
+      background: #17243c;
+      color: white;
+    }
+
+    .wrap { max-width: 1160px; margin: auto; }
+    h1 { margin: 0; font-size: clamp(23px, 4vw, 34px); }
+    h2 { margin-top: 0; }
+    header p { margin-bottom: 0; color: #dbe4ff; }
+
+    main { padding: 24px 16px 48px; }
+
+    .card {
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--card);
+      box-shadow: 0 5px 20px #17243c08;
+    }
+
+    .login { max-width: 500px; margin: 20px auto; }
+    label { display: block; margin-top: 16px; font-weight: 700; }
+
+    input {
+      width: 100%;
+      padding: 13px;
+      margin-top: 6px;
+      border: 1px solid #aebbd2;
+      border-radius: 10px;
+    }
+
+    input:focus-visible,
+    button:focus-visible {
+      outline: 3px solid #e2a600;
+      outline-offset: 3px;
+    }
+
+    .primary {
+      padding: 13px 20px;
+      border: 0;
+      border-radius: 12px;
+      background: var(--primary);
+      color: white;
+      font-weight: 800;
+    }
+
+    .wide { width: 100%; margin-top: 22px; }
+    .muted { color: var(--muted); }
+    .small { font-size: 14px; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .pill {
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: #e9edff;
+      color: #273e9e;
+      font-weight: 700;
+    }
+
+    progress {
+      width: 100%;
+      height: 16px;
+      accent-color: var(--primary);
+    }
+
+    .rooms {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 18px 0;
+    }
+
+    .room {
+      padding: 10px;
+      border-radius: 12px;
+      background: #eef1f6;
+      color: #5b6578;
+      font-size: 13px;
+    }
+
+    .room.active {
+      background: #e5eaff;
+      color: #253bad;
+      outline: 2px solid #344ed2;
+    }
+
+    .room.done { background: #e4f4ea; color: var(--good); }
+
+    .question { font-size: 23px; margin: 18px 0; }
+
+    .options { display: grid; gap: 11px; }
+
+    .option {
+      text-align: left;
+      padding: 16px;
+      border: 2px solid var(--line);
+      border-radius: 13px;
+      background: white;
+      color: var(--ink);
+    }
+
+    .option.selected {
+      border-color: var(--primary);
+      background: #eef1ff;
+    }
+
+    .feedback {
+      margin-top: 20px;
+      padding: 18px;
+      border-radius: 12px;
+      background: #edf3fb;
+    }
+
+    .feedback.good { background: #e7f5eb; color: var(--good); }
+    .feedback.bad { background: #fff0f0; color: var(--bad); }
+
+    .notice {
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: #fff3cf;
+      color: #705000;
+    }
+
+    .error { color: var(--bad); min-height: 24px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+
+    th, td {
+      padding: 11px 5px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      overflow-wrap: anywhere;
+    }
+
+    tr.me { background: #eef1ff; font-weight: 800; }
+    .scroll { max-height: 520px; overflow: auto; }
+
+    .finish {
+      padding: 24px;
+      text-align: center;
+      background: #eef1ff;
+      border-radius: 16px;
+    }
+
+    .score-big {
+      font-size: 48px;
+      font-weight: 900;
+      color: var(--primary);
+    }
+
+    .code {
+      margin-top: 20px;
+      padding: 16px;
+      border: 1px dashed #8294c8;
+      border-radius: 12px;
+      background: #fafbff;
+    }
+
+    @media (max-width: 850px) {
+      .layout { grid-template-columns: 1fr; }
+      .card { padding: 18px; }
+      .question { font-size: 20px; }
+    }
+
+    @media (max-width: 450px) {
+      .rooms { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="wrap">
+      <h1>역사 방탈출: 생활 기록 복원 작전</h1>
+      <p>6개의 방을 탐험하고 옛사람들의 생활 기록을 복원하세요.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="loginPanel" class="card login">
+      <h2>탐험대 입장</h2>
+      <p class="muted">
+        같은 참여 코드를 입력하면 친구들과 점수를 비교할 수 있습니다.
+      </p>
+
+      <form id="joinForm">
+        <label for="roomCode">참여 코드</label>
+        <input
+          id="roomCode"
+          maxlength="20"
+          placeholder="예: HISTORY56"
+          autocomplete="off"
+          autocapitalize="characters"
+          pattern="[A-Za-z0-9]{4,20}"
+          required
+        >
+
+        <label for="nickname">별명 또는 모둠 이름</label>
+        <input
+          id="nickname"
+          maxlength="12"
+          placeholder="예: 푸른고래 모둠"
+          autocomplete="off"
+          required
+        >
+
+        <button id="joinButton" class="primary wide" type="submit">
+          탐험 시작
+        </button>
+
+        <p id="loginError" class="error" role="alert"></p>
+      </form>
+
+      <p class="muted small">
+        실명 대신 별명을 사용하세요. 같은 브라우저에서는 이전 기록으로
+        이어집니다. 모둠 활동은 모둠당 한 기기를 권장합니다.
+      </p>
+    </section>
+
+    <section id="gamePanel" hidden>
+      <div id="roomNotice" class="notice" role="status" hidden></div>
+
+      <div class="layout">
+        <section class="card">
+          <div class="stats">
+            <span id="playerBadge" class="pill"></span>
+            <span id="scoreBadge" class="pill">0점</span>
+            <span id="progressBadge" class="pill">0 / 30</span>
+          </div>
+
+          <progress id="progressBar" max="30" value="0"
+            aria-label="문제 풀이 진행률"></progress>
+
+          <div id="roomList" class="rooms"></div>
+
+          <div id="quizArea">
+            <p id="roomTitle" class="muted"></p>
+            <h2 id="questionText" class="question"></h2>
+
+            <div id="options" class="options"
+              role="group" aria-label="정답 보기"></div>
+
+            <button id="submitButton" class="primary wide" disabled>
+              정답 제출
+            </button>
+
+            <div id="feedback" class="feedback"
+              aria-live="polite" hidden></div>
+
+            <button id="nextButton" class="primary wide" hidden>
+              다음 문제
+            </button>
+          </div>
+
+          <div id="finishArea" class="finish" hidden>
+            <h2>생활 기록 복원 완료!</h2>
+            <div id="finalScore" class="score-big"></div>
+            <p id="finalSummary"></p>
+            <p>
+              마지막 탐험 과제<br>
+              <strong>유물 한 가지와 그것으로 알 수 있는 생활 모습을
+              친구에게 설명해 보세요.</strong>
+            </p>
+          </div>
+
+          <div class="code">
+            <strong>모은 암호 조각</strong>
+            <p id="secretWords">방을 완료하면 암호 조각이 나타납니다.</p>
+          </div>
+
+          <p id="gameError" class="error" role="alert"></p>
+          <p class="muted small">
+            정답당 10점 · 문항당 한 번 제출 · 시간에 따른 가산점 없음
+          </p>
+        </section>
+
+        <aside class="card">
+          <h2>실시간 탐험 순위</h2>
+          <p id="rankingInfo" class="muted small"></p>
+
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">순위</th>
+                  <th scope="col">탐험대</th>
+                  <th scope="col">점수</th>
+                  <th scope="col">진행</th>
+                </tr>
+              </thead>
+              <tbody id="rankingBody"></tbody>
+            </table>
+          </div>
+
+          <p id="rankingStatus" class="muted small" role="status">
+            순위를 불러오는 중입니다.
+          </p>
+          <p class="muted small">
+            같은 점수는 공동 순위입니다. 점수보다 서로의 배움을 응원해 주세요.
+          </p>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from
+      "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+    import {
+      getAuth,
+      signInAnonymously,
+      setPersistence,
+      browserLocalPersistence
+    } from
+      "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    import {
+      getFirestore,
+      doc,
+      collection,
+      getDoc,
+      onSnapshot,
+      runTransaction,
+      serverTimestamp
+    } from
+      "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // ==========================================
+    // 본인 Firebase 프로젝트의 웹 앱 설정으로 교체
+    // ==========================================
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const ROOMS = [
+      {
+        title: "구석기 동굴",
+        mission: "동굴 속 단서로 구석기 사람들의 생활을 밝혀보세요.",
+        word: "유물과"
+      },
+      {
+        title: "신석기 마을",
+        mission: "사람들이 한곳에 모여 살면서 무엇이 달라졌을까요?",
+        word: "유적을"
+      },
+      {
+        title: "고조선 유물 창고",
+        mission: "큰 돌무덤과 옛 법의 기록을 조사하세요.",
+        word: "살펴보면"
+      },
+      {
+        title: "고대 문화유산 전시실",
+        mission: "문화유산과 생활 모습을 연결하세요.",
+        word: "옛사람들의"
+      },
+      {
+        title: "고려의 생활 거리",
+        mission: "고려의 항구와 마을에서 생활의 단서를 찾으세요.",
+        word: "생활을"
+      },
+      {
+        title: "고려 문화재 금고",
+        mission: "고려 문화유산의 특징을 밝혀 마지막 금고를 여세요.",
+        word: "알 수 있다"
+      }
+    ];
+
+    // a: 정답 보기의 인덱스. 첫 번째 보기가 0입니다.
+    // 문제 순서나 정답 위치를 바꾸면 보안 규칙도 함께 수정하세요.
+    const QUESTIONS = [
+      // 1번 방: 구석기
+      {
+        q: "돌을 깨뜨리거나 떼어 내어 만든 구석기 시대 도구는?",
+        o: ["간석기", "뗀석기", "청동검", "철제 낫"],
+        a: 1,
+        e: "뗀석기는 돌을 깨뜨리거나 떼어 내어 만든 도구입니다."
+      },
+      {
+        q: "구석기 시대의 대표적인 먹거리 마련 방법은?",
+        o: ["벼농사", "목장에서 가축 기르기", "사냥과 열매 채집", "시장에서 곡식 사기"],
+        a: 2,
+        e: "구석기 사람들은 사냥과 채집 등으로 먹거리를 구했습니다."
+      },
+      {
+        q: "구석기 시대 사람들이 살던 곳은?",
+        o: ["동굴이나 막집", "기와집", "아파트", "벽돌집"],
+        a: 0,
+        e: "구석기 사람들은 동굴이나 나뭇가지 등으로 만든 막집에서 살았습니다."
+      },
+      {
+        q: "구석기 시대의 생활 모습으로 알맞은 것은?",
+        o: ["논에서 벼를 길렀다", "금속으로 도구를 만들었다", "성을 쌓고 도시에서 살았다", "먹거리를 찾아 이동했다"],
+        a: 3,
+        e: "먹거리를 얻기 위해 이동하며 생활했습니다."
+      },
+      {
+        q: "동굴에서 동물 뼈와 사냥용 뗀석기가 발견되었습니다. 알맞은 추론은?",
+        o: ["금속 활자로 책을 만들었다", "동물을 사냥하고 고기를 먹었다", "청자를 만들었다", "기와집에서 살았다"],
+        a: 1,
+        e: "동물 뼈와 사냥 도구는 당시 사람들이 사냥했음을 알려 주는 단서입니다."
+      },
+
+      // 2번 방: 신석기
+      {
+        q: "돌을 갈아서 만든 신석기 시대 도구는?",
+        o: ["뗀석기", "청동검", "간석기", "철제 괭이"],
+        a: 2,
+        e: "간석기는 돌을 갈아 만든 도구입니다."
+      },
+      {
+        q: "신석기 시대에 새롭게 나타난 생활 모습은?",
+        o: ["농사와 가축 기르기의 시작", "금속 활자 인쇄", "철도 이용", "공장 생산"],
+        a: 0,
+        e: "신석기 시대에는 농사를 짓고 가축을 기르기 시작했습니다."
+      },
+      {
+        q: "음식을 저장하거나 조리하는 데 쓰인, 빗살 모양 무늬의 토기는?",
+        o: ["고려청자", "백자", "금동 대향로", "빗살무늬 토기"],
+        a: 3,
+        e: "빗살무늬 토기는 신석기 시대의 대표적인 토기입니다."
+      },
+      {
+        q: "땅을 파서 바닥을 만들고 기둥과 지붕을 세운 집은?",
+        o: ["기와집", "움집", "벽돌집", "아파트"],
+        a: 1,
+        e: "신석기 시대 사람들은 움집을 짓고 생활했습니다."
+      },
+      {
+        q: "농사를 짓기 시작하면서 나타난 생활의 변화는?",
+        o: ["먹거리를 전혀 저장하지 않았다", "집을 짓지 않았다", "한곳에 머무르는 정착 생활", "모든 사람이 배에서 살았다"],
+        a: 2,
+        e: "농사와 함께 한곳에 머물러 사는 정착 생활이 나타났습니다."
+      },
+
+      // 3번 방: 고조선
+      {
+        q: "청동 도구가 등장하고 힘이 강한 지배자가 나타난 시대는?",
+        o: ["청동기 시대", "구석기 시대", "조선 시대", "현대"],
+        a: 0,
+        e: "청동기 시대에는 사회적 차이가 커지고 힘이 강한 지배자가 나타났습니다."
+      },
+      {
+        q: "청동기 시대의 대표적인 무덤으로 커다란 돌을 이용한 것은?",
+        o: ["움집", "석굴암", "첨성대", "고인돌"],
+        a: 3,
+        e: "고인돌은 청동기 시대의 대표적인 무덤입니다."
+      },
+      {
+        q: "큰 고인돌을 만드는 데 많은 사람의 힘이 필요했습니다. 알맞은 추론은?",
+        o: ["당시에는 사람이 살지 않았다", "사람들을 동원할 수 있는 지배자가 있었다", "모두 동굴에서 살았다", "돌을 전혀 사용하지 않았다"],
+        a: 1,
+        e: "큰 무덤은 많은 사람을 동원할 수 있었던 지배자의 힘을 짐작하게 합니다."
+      },
+      {
+        q: "청동기 문화를 바탕으로 세워진 우리 역사 최초의 국가는?",
+        o: ["고려", "신라", "고조선", "조선"],
+        a: 2,
+        e: "고조선은 우리 역사 최초의 국가입니다."
+      },
+      {
+        q: "고조선의 도둑질 처벌 법을 통해 중요하게 여겼음을 알 수 있는 것은?",
+        o: ["개인의 재산", "해외여행", "인쇄 기술", "도자기 색깔"],
+        a: 0,
+        e: "다른 사람의 물건을 훔친 사람을 처벌한 법에서 개인의 재산을 보호했음을 알 수 있습니다."
+      },
+
+      // 4번 방: 고대 문화유산
+      {
+        q: "고구려·백제·신라를 묶어 부르는 말은?",
+        o: ["고려", "고조선", "조선", "삼국"],
+        a: 3,
+        e: "고구려·백제·신라 세 나라를 삼국이라고 합니다."
+      },
+      {
+        q: "고구려 고분 벽화의 사냥과 춤 그림으로 알 수 있는 것은?",
+        o: ["미래의 교통수단", "당시 사람들의 생활 모습", "오늘의 날씨", "현대 도시의 모습"],
+        a: 1,
+        e: "고분 벽화는 당시 사람들의 생활과 생각을 살펴보는 자료입니다."
+      },
+      {
+        q: "백제 금동 대향로의 정교한 모습에서 알 수 있는 것은?",
+        o: ["금속을 사용하지 않았다", "농사를 짓지 않았다", "공예 기술이 뛰어났다", "글자가 없었다"],
+        a: 2,
+        e: "금동 대향로는 백제의 뛰어난 공예 기술을 보여 줍니다."
+      },
+      {
+        q: "신라의 화려한 금관과 장신구에서 알 수 있는 기술은?",
+        o: ["금속을 정교하게 다루는 기술", "종이를 만드는 기술", "활자를 조합하는 기술", "배를 조종하는 기술"],
+        a: 0,
+        e: "금관과 장신구는 신라의 발달한 금속 공예 기술을 보여 줍니다."
+      },
+      {
+        q: "불국사와 석굴암에 깊이 관련된 종교는?",
+        o: ["천주교", "이슬람교", "개신교", "불교"],
+        a: 3,
+        e: "불국사와 석굴암은 불교와 관련된 대표적인 문화유산입니다."
+      },
+
+      // 5번 방: 고려의 생활
+      {
+        q: "고려 시대 여러 나라 상인들이 드나들던 국제 무역항은?",
+        o: ["한양", "벽란도", "경주", "부여"],
+        a: 1,
+        e: "벽란도는 고려의 대표적인 국제 무역항이었습니다."
+      },
+      {
+        q: "벽란도에 여러 나라 상인이 찾아왔다는 사실의 의미는?",
+        o: ["외국과 전혀 교류하지 않았다", "모든 사람이 외국으로 떠났다", "외국과 활발하게 교류했다", "물건을 사고팔지 않았다"],
+        a: 2,
+        e: "외국 상인의 방문은 고려가 다른 나라와 활발히 교류했음을 알려 줍니다."
+      },
+      {
+        q: "다른 나라와 물건을 사고파는 활동을 무엇이라고 하나요?",
+        o: ["무역", "채집", "사냥", "발굴"],
+        a: 0,
+        e: "나라 사이에서 물건 등을 사고파는 활동을 무역이라고 합니다."
+      },
+      {
+        q: "고려 사람들이 절과 불상을 만들며 중요하게 여긴 종교는?",
+        o: ["개신교", "천주교", "이슬람교", "불교"],
+        a: 3,
+        e: "불교는 고려 사람들의 생활과 문화에 큰 영향을 주었습니다."
+      },
+      {
+        q: "고려의 절·불상·불교 행사를 통해 알 수 있는 사실은?",
+        o: ["종교는 생활과 관련이 없었다", "불교가 사람들의 생활에 영향을 주었다", "모든 사람이 외국인이었다", "고려에는 문화가 없었다"],
+        a: 1,
+        e: "절과 불상, 관련 행사는 불교가 생활에 영향을 주었음을 보여 줍니다."
+      },
+
+      // 6번 방: 고려 문화
+      {
+        q: "고려의 대표적인 도자기로 아름다운 푸른빛을 띠는 것은?",
+        o: ["빗살무늬 토기", "기와", "고려청자", "금관"],
+        a: 2,
+        e: "고려청자는 아름다운 빛깔과 형태로 알려진 고려의 대표적인 도자기입니다."
+      },
+      {
+        q: "도자기에 무늬를 파고 다른 색 흙을 채우는 기법은?",
+        o: ["상감 기법", "뗀석기 제작법", "금속 활자 인쇄법", "종이 접기"],
+        a: 0,
+        e: "상감 기법은 표면에 무늬를 파고 다른 색의 흙을 채워 표현하는 방법입니다."
+      },
+      {
+        q: "불교 경전을 수많은 나무판에 새긴 고려의 문화유산은?",
+        o: ["금동 대향로", "석굴암", "고인돌", "팔만대장경"],
+        a: 3,
+        e: "팔만대장경은 불교 경전을 나무판에 새긴 문화유산입니다."
+      },
+      {
+        q: "팔만대장경 목판과 금속 활자의 재료를 바르게 연결한 것은?",
+        o: ["목판－금속 / 활자－나무", "목판－나무 / 활자－금속", "목판－돌 / 활자－유리", "목판－흙 / 활자－종이"],
+        a: 1,
+        e: "팔만대장경 목판은 나무로, 금속 활자는 금속으로 만들었습니다."
+      },
+      {
+        q: "글자 하나하나를 따로 만든 금속 활자의 장점은?",
+        o: ["한 번 쓰고 반드시 버린다", "그림만 인쇄할 수 있다", "글자를 다시 조합해 다른 내용도 인쇄할 수 있다", "글자를 바꿀 수 없다"],
+        a: 2,
+        e: "금속 활자는 글자를 다시 배열하여 다른 내용의 책을 인쇄할 수 있습니다."
+      }
+    ];
+
+    const $ = id => document.getElementById(id);
+
+    let auth;
+    let db;
+    let uid;
+    let roomCode;
+    let playerRef;
+
+    let player = null;
+    let roomIsOpen = false;
+    let selected = null;
+    let viewIndex = 0;
+    let feedbackIndex = null;
+    let busy = false;
+
+    let stopRoom = null;
+    let stopPlayers = null;
+
+    function errorText(error) {
+      const code = error?.code || "";
+
+      if (code.includes("permission-denied")) {
+        return "저장 권한이 없습니다. 방이 닫혔거나 보안 규칙 설정이 맞지 않을 수 있습니다.";
+      }
+
+      if (code.includes("operation-not-allowed")) {
+        return "Firebase에서 익명 로그인을 사용 설정해 주세요.";
+      }
+
+      if (code.includes("unauthorized-domain")) {
+        return "Firebase Authentication 설정에서 실행 도메인을 확인해 주세요.";
+      }
+
+      if (
+        code.includes("network-request-failed") ||
+        code.includes("unavailable")
+      ) {
+        return "인터넷 연결을 확인한 뒤 다시 시도해 주세요.";
+      }
+
+      return error?.message || "처리 중 오류가 발생했습니다.";
+    }
+
+    function updateSubmitButton() {
+      $("submitButton").disabled =
+        busy ||
+        !roomIsOpen ||
+        selected === null ||
+        feedbackIndex !== null ||
+        !player ||
+        player.index >= QUESTIONS.length;
+
+      document.querySelectorAll(".option").forEach(button => {
+        button.disabled = busy || !roomIsOpen || feedbackIndex !== null;
+      });
+    }
+
+    function renderHeader() {
+      $("playerBadge").textContent = player.nickname;
+      $("scoreBadge").textContent = `${player.score}점`;
+      $("progressBadge").textContent =
+        `${player.index} / ${QUESTIONS.length}`;
+      $("progressBar").value = player.index;
+
+      $("roomList").replaceChildren();
+
+      ROOMS.forEach((room, i) => {
+        const tile = document.createElement("div");
+        const done = player.index >= (i + 1) * 5;
+        const active =
+          player.index < QUESTIONS.length &&
+          Math.floor(player.index / 5) === i;
+
+        tile.className =
+          "room" + (done ? " done" : active ? " active" : "");
+
+        tile.textContent =
+          `${i + 1}번 ${room.title}${done ? " · 완료" : ""}`;
+
+        $("roomList").append(tile);
+      });
+
+      const completed = Math.floor(player.index / 5);
+
+      $("secretWords").textContent = completed
+        ? ROOMS.slice(0, completed).map(room => room.word).join(" / ")
+        : "방을 완료하면 암호 조각이 나타납니다.";
+    }
+
+    function renderQuestion() {
+      renderHeader();
+
+      selected = null;
+      feedbackIndex = null;
+      viewIndex = player.index;
+
+      $("feedback").hidden = true;
+      $("nextButton").hidden = true;
+      $("submitButton").hidden = false;
+      $("gameError").textContent = "";
+
+      const finished = viewIndex >= QUESTIONS.length;
+      $("quizArea").hidden = finished;
+      $("finishArea").hidden = !finished;
+
+      if (finished) {
+        $("finalScore").textContent = `${player.score}점`;
+        $("finalSummary").textContent =
+          `30문제 중 ${player.score / 10}문제 정답 · 6개의 방 탐험 완료`;
+        return;
+      }
+
+      const q = QUESTIONS[viewIndex];
+      const roomNumber = Math.floor(viewIndex / 5);
+      const room = ROOMS[roomNumber];
+
+      $("roomTitle").textContent =
+        `${roomNumber + 1}번 방 · ${room.title} · ` +
+        `${viewIndex % 5 + 1}/5문제 — ${room.mission}`;
+
+      $("questionText").textContent = q.q;
+      $("options").replaceChildren();
+
+      q.o.forEach((text, i) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "option";
+        button.textContent = `${i + 1}. ${text}`;
+        button.setAttribute("aria-pressed", "false");
+
+        button.addEventListener("click", () => {
+          if (busy || !roomIsOpen || feedbackIndex !== null) return;
+
+          selected = i;
+
+          document.querySelectorAll(".option").forEach((item, j) => {
+            item.classList.toggle("selected", i === j);
+            item.setAttribute("aria-pressed", String(i === j));
+          });
+
+          updateSubmitButton();
+        });
+
+        $("options").append(button);
+      });
+
+      updateSubmitButton();
+    }
+
+    function showFeedback(index, answer) {
+      const q = QUESTIONS[index];
+      const correct = answer === q.a;
+      const box = $("feedback");
+
+      box.replaceChildren();
+      box.className = "feedback " + (correct ? "good" : "bad");
+
+      const heading = document.createElement("strong");
+      heading.textContent = correct
+        ? "정답입니다! 10점을 얻었습니다."
+        : `이번에는 아쉬워요. 정답은 “${q.o[q.a]}”입니다.`;
+
+      const explanation = document.createElement("p");
+      explanation.textContent = q.e;
+
+      box.append(heading, explanation);
+
+      if ((index + 1) % 5 === 0) {
+        const message = document.createElement("p");
+        const room = ROOMS[Math.floor(index / 5)];
+        message.textContent =
+          `방 탐험 완료! 암호 조각 “${room.word}”를 얻었습니다.`;
+        box.append(message);
+      }
+
+      box.hidden = false;
+      $("submitButton").hidden = true;
+      $("nextButton").hidden = false;
+      $("nextButton").textContent =
+        index === QUESTIONS.length - 1 ? "최종 결과 보기" : "다음 문제";
+
+      updateSubmitButton();
+      $("nextButton").focus();
+    }
+
+    function renderRanking(snapshot) {
+      const rows = snapshot.docs.map(item => ({
+        id: item.id,
+        ...item.data()
+      }));
+
+      rows.sort((a, b) =>
+        b.score - a.score ||
+        a.nickname.localeCompare(b.nickname, "ko") ||
+        a.id.localeCompare(b.id)
+      );
+
+      $("rankingBody").replaceChildren();
+      $("rankingInfo").textContent =
+        `참여 코드 ${roomCode} · 누적 참가 ${rows.length}팀/명`;
+
+      let rank = 0;
+      let previousScore = null;
+
+      rows.forEach((item, i) => {
+        if (item.score !== previousScore) rank = i + 1;
+        previousScore = item.score;
+
+        const tr = document.createElement("tr");
+        if (item.id === uid) tr.className = "me";
+
+        const values = [
+          `${rank}`,
+          item.nickname + (item.id === uid ? " (나)" : ""),
+          `${item.score}점`,
+          item.index === 30 ? "완료" : `${item.index}/30`
+        ];
+
+        values.forEach(value => {
+          const td = document.createElement("td");
+          // 별명은 HTML로 삽입하지 않습니다.
+          td.textContent = value;
+          tr.append(td);
+        });
+
+        $("rankingBody").append(tr);
+      });
+
+      $("rankingStatus").textContent = snapshot.metadata.fromCache
+        ? "캐시 기록입니다. 서버 연결 상태를 확인하는 중입니다."
+        : "서버와 연결되어 순위를 실시간으로 갱신합니다.";
+
+      // 같은 계정으로 열린 다른 탭에서 진행한 내용도 반영.
+      const mine = rows.find(item => item.id === uid);
+
+      if (mine && !busy && mine.index !== player.index) {
+        player = mine;
+        renderQuestion();
+      } else if (mine && !busy) {
+        player = mine;
+        renderHeader();
+      }
+    }
+
+    async function joinGame(event) {
+      event.preventDefault();
+
+      const code = $("roomCode").value.trim().toUpperCase();
+      const name = $("nickname").value.trim();
+
+      $("loginError").textContent = "";
+
+      if (!/^[A-Z0-9]{4,20}$/.test(code)) {
+        $("loginError").textContent =
+          "참여 코드는 영문과 숫자 4~20자로 입력하세요.";
+        return;
+      }
+
+      if (!name || name.length > 12) {
+        $("loginError").textContent = "별명을 1~12자로 입력하세요.";
+        return;
+      }
+
+      if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+        $("loginError").textContent =
+          "먼저 코드의 firebaseConfig를 본인 프로젝트 설정으로 바꿔 주세요.";
+        return;
+      }
+
+      $("joinButton").disabled = true;
+
+      try {
+        if (!auth) {
+          const app = initializeApp(firebaseConfig);
+          auth = getAuth(app);
+          db = getFirestore(app);
+        }
+
+        await setPersistence(auth, browserLocalPersistence);
+        await auth.authStateReady();
+
+        if (!auth.currentUser) {
+          await signInAnonymously(auth);
+        }
+
+        uid = auth.currentUser.uid;
+
+        const roomRef = doc(db, "rooms", code);
+        const roomSnapshot = await getDoc(roomRef);
+
+        if (!roomSnapshot.exists()) {
+          throw new Error("참여 코드를 찾을 수 없습니다.");
+        }
+
+        if (roomSnapshot.data().open !== true) {
+          throw new Error("교사가 아직 방을 열지 않았거나 활동이 종료되었습니다.");
+        }
+
+        const ref = doc(db, "rooms", code, "players", uid);
+
+        const initialPlayer = await runTransaction(db, async tx => {
+          const existing = await tx.get(ref);
+
+          if (existing.exists()) return existing.data();
+
+          const initial = {
+            nickname: name,
+            index: 0,
+            score: 0,
+            lastAnswer: -1,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          };
+
+          tx.set(ref, initial);
+          return initial;
+        });
+
+        roomCode = code;
+        playerRef = ref;
+        player = initialPlayer;
+        roomIsOpen = true;
+
+        $("loginPanel").hidden = true;
+        $("gamePanel").hidden = false;
+        renderQuestion();
+
+        stopRoom?.();
+        stopPlayers?.();
+
+        stopRoom = onSnapshot(roomRef, snapshot => {
+          roomIsOpen =
+            snapshot.exists() && snapshot.data().open === true;
+
+          $("roomNotice").hidden = roomIsOpen;
+          $("roomNotice").textContent =
+            "교사가 활동을 종료했습니다. 추가 제출은 할 수 없습니다.";
+
+          updateSubmitButton();
+        }, error => {
+          roomIsOpen = false;
+          $("roomNotice").hidden = false;
+          $("roomNotice").textContent = errorText(error);
+          updateSubmitButton();
+        });
+
+        stopPlayers = onSnapshot(
+          collection(db, "rooms", code, "players"),
+          { includeMetadataChanges: true },
+          renderRanking,
+          error => {
+            $("rankingStatus").textContent = errorText(error);
+          }
+        );
+
+      } catch (error) {
+        $("loginError").textContent = errorText(error);
+      } finally {
+        $("joinButton").disabled = false;
+      }
+    }
+
+    async function submitAnswer() {
+      if (
+        busy ||
+        !roomIsOpen ||
+        selected === null ||
+        feedbackIndex !== null
+      ) return;
+
+      const index = viewIndex;
+      const answer = selected;
+      const q = QUESTIONS[index];
+
+      busy = true;
+      feedbackIndex = index;
+      $("gameError").textContent = "";
+      updateSubmitButton();
+
+      try {
+        const result = await runTransaction(db, async tx => {
+          const snapshot = await tx.get(playerRef);
+
+          if (!snapshot.exists()) {
+            throw new Error("참가 기록을 찾을 수 없습니다. 다시 접속해 주세요.");
+          }
+
+          const current = snapshot.data();
+
+          if (current.index !== index) {
+            throw new Error(
+              "다른 탭에서 이미 진행한 문제입니다. 새로고침하여 이어가세요."
+            );
+          }
+
+          const next = {
+            ...current,
+            index: index + 1,
+            score: current.score + (answer === q.a ? 10 : 0),
+            lastAnswer: answer
+          };
+
+          tx.update(playerRef, {
+            index: next.index,
+            score: next.score,
+            lastAnswer: answer,
+            updatedAt: serverTimestamp()
+          });
+
+          return next;
+        });
+
+        player = result;
+        renderHeader();
+        showFeedback(index, answer);
+
+      } catch (error) {
+        feedbackIndex = null;
+        $("gameError").textContent = errorText(error);
+      } finally {
+        busy = false;
+        updateSubmitButton();
+      }
+    }
+
+    $("joinForm").addEventListener("submit", joinGame);
+    $("submitButton").addEventListener("click", submitAnswer);
+    $("nextButton").addEventListener("click", renderQuestion);
+
+    window.addEventListener("offline", () => {
+      $("rankingStatus").textContent =
+        "인터넷 연결이 끊겼습니다. 연결 후 다시 제출해 주세요.";
+    });
+
+    window.addEventListener("online", () => {
+      $("rankingStatus").textContent =
+        "인터넷이 연결되었습니다. 서버 갱신을 기다리는 중입니다.";
+    });
+  </script>
+</body>
+</html>
