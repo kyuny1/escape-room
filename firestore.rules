@@ -11,13 +11,22 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/rooms/$(code)).data.open == true;
     }
 
+    // index is zero-based. The current 30 questions repeat answers [1, 2, 0, 3].
+    // Update this function whenever the question order or answer key changes.
+    function correctAnswer(index) {
+      return index % 4 == 0 ? 1
+        : index % 4 == 1 ? 2
+        : index % 4 == 2 ? 0
+        : 3;
+    }
+
     match /rooms/{code} {
-      // 참여 코드를 확인하는 데 필요한 문서 읽기만 허용합니다.
+      // Signed-in users can check whether a room code exists/is open.
       allow get: if signedIn();
       allow list, create, update, delete: if false;
 
       match /players/{uid} {
-        // 순위표는 열린 방의 참가자에게만 공개됩니다.
+        // Only authenticated participants can see the live leaderboard for an open room.
         allow get, list: if signedIn() && roomOpen(code);
 
         allow create: if signedIn()
@@ -54,8 +63,9 @@ service cloud.firestore {
           && request.resource.data.createdAt == resource.data.createdAt
           && request.resource.data.index == resource.data.index + 1
           && request.resource.data.index <= 30
-          && request.resource.data.score >= resource.data.score
-          && request.resource.data.score <= resource.data.score + 10
+          && request.resource.data.score
+            == resource.data.score
+              + (request.resource.data.lastAnswer == correctAnswer(resource.data.index) ? 10 : 0)
           && request.resource.data.score % 10 == 0
           && request.resource.data.lastAnswer in [0, 1, 2, 3]
           && request.resource.data.updatedAt == request.time;
