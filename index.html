@@ -324,41 +324,7 @@
     </section>
   </main>
 
-  <script type="module">
-    import { initializeApp } from
-      "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-
-    import {
-      getAuth,
-      signInAnonymously,
-      setPersistence,
-      browserLocalPersistence
-    } from
-      "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-    import {
-      getFirestore,
-      doc,
-      collection,
-      getDoc,
-      onSnapshot,
-      runTransaction,
-      serverTimestamp
-    } from
-      "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-    // ==========================================
-    // 본인 Firebase 프로젝트의 웹 앱 설정으로 교체
-    // ==========================================
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
-
+  <script>
     const ROOMS = [
       {
         title: "구석기 동굴",
