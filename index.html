@@ -184,6 +184,14 @@
     tr.me { background: #eef1ff; font-weight: 800; }
     .scroll { max-height: 520px; overflow: auto; }
 
+    .race-track { display: grid; gap: 12px; }
+    .race-lane { position: relative; overflow: hidden; padding: 10px 12px 12px; border-radius: 12px; border: 1px solid #dce3ef; background: repeating-linear-gradient(0deg, #f1f4f8 0 34px, #fff 34px 38px); }
+    .race-top { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 800; }
+    .race-road { position: relative; height: 42px; margin-top: 5px; border-bottom: 3px dashed #b6c0cf; }
+    .race-car { position: absolute; left: 0; top: 0; width: 66px; height: 38px; transition: left .7s ease; filter: drop-shadow(0 2px 1px #0002); }
+    .race-car svg { width: 100%; height: 100%; }
+    .race-lane.me { border: 2px solid #344ed2; background-color: #eef1ff; }
+    .race-lane.me .race-top { color: #273e9e; }
     .finish {
       padding: 24px;
       text-align: center;
@@ -221,7 +229,7 @@
   <header>
     <div class="wrap">
       <h1>역사 방탈출: 생활 기록 복원 작전</h1>
-      <p>6개의 방을 탐험하고 옛사람들의 생활 기록을 복원하세요. 점수는 내 브라우저에만 저장됩니다.</p>
+      <p>6개의 방을 탐험하고 옛사람들의 생활 기록을 복원하세요. 실시간 레이싱 순위에서 다른 탐험대와 점수를 겨뤄 보세요.</p>
     </div>
   </header>
 
@@ -229,10 +237,12 @@
     <section id="loginPanel" class="card login">
       <h2>탐험대 입장</h2>
       <p class="muted">
-        별명을 입력하고 탐험을 시작하세요. 진행 상황과 점수는 이 브라우저에만 저장됩니다.
+        참여 코드와 별명을 입력하세요. 같은 코드를 사용하는 탐험대의 점수가 실시간으로 반영됩니다.
       </p>
 
       <form id="joinForm">
+        <label for="roomCode">참여 코드</label>
+        <input id="roomCode" maxlength="20" placeholder="예: HISTORY56" autocomplete="off" required>
         <label for="nickname">별명</label>
         <input
           id="nickname"
@@ -250,8 +260,7 @@
       </form>
 
       <p class="muted small">
-        실명 대신 별명을 사용하세요. 같은 브라우저에서는 이전 기록으로
-        이어집니다. 모둠 활동은 모둠당 한 기기를 권장합니다.
+        실명 대신 별명을 사용하세요. 교사가 만든 참여 코드가 필요합니다.
       </p>
     </section>
 
@@ -311,20 +320,21 @@
         </section>
 
         <aside class="card">
-          <h2>나의 탐험 기록</h2>
-          <p class="muted">점수와 진행 상황은 현재 브라우저에만 저장됩니다.</p>
-          <ul>
-            <li>총 30문제, 정답당 10점</li>
-            <li>다시 접속하면 같은 별명의 기록을 이어갈 수 있습니다.</li>
-            <li>브라우저 데이터나 사이트 저장 공간을 지우면 기록도 사라질 수 있습니다.</li>
-            <li>다른 사람과 점수나 순위를 공유하는 기능은 없습니다.</li>
-          </ul>
+          <h2>🏁 실시간 레이싱 순위</h2>
+          <p class="muted small">점수가 높을수록 레이싱 트랙을 더 멀리 달립니다.</p>
+          <div id="raceTrack" class="race-track" aria-live="polite"><p class="muted">참여 코드로 입장하면 순위가 표시됩니다.</p></div>
+          <p id="rankingStatus" class="muted small" role="status">대기 중</p>
+          <p class="muted small">정답당 10점 · 최대 300점 · 순위는 실시간으로 갱신됩니다.</p>
         </aside>
       </div>
     </section>
   </main>
 
-  <script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
     const ROOMS = [
       {
         title: "구석기 동굴",
@@ -555,246 +565,22 @@
     ];
 
     const $ = id => document.getElementById(id);
+    const firebaseConfig = { apiKey: "YOUR_API_KEY", authDomain: "YOUR_PROJECT_ID.firebaseapp.com", projectId: "YOUR_PROJECT_ID", appId: "YOUR_APP_ID" };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    let player=null, selected=null, viewIndex=0, feedbackIndex=null, busy=false, roomCode="", playerRef=null, unsubscribeRanking=null, currentUid="";
 
-    const STORAGE_PREFIX = "history-escape-room-v1:";
-    let player = null;
-    let selected = null;
-    let viewIndex = 0;
-    let feedbackIndex = null;
-    let busy = false;
-    let storageKey = "";
-
-    function updateSubmitButton() {
-      $("submitButton").disabled =
-        busy ||
-        selected === null ||
-        feedbackIndex !== null ||
-        !player ||
-        player.index >= QUESTIONS.length;
-
-      document.querySelectorAll(".option").forEach(button => {
-        button.disabled = busy || feedbackIndex !== null;
-      });
-    }
-
-    function savePlayer() {
-      try {
-        localStorage.setItem(storageKey, JSON.stringify({
-          nickname: player.nickname,
-          index: player.index,
-          score: player.score
-        }));
-      } catch (error) {
-        $("gameError").textContent =
-          "브라우저 저장 공간에 기록을 저장하지 못했습니다. 브라우저 설정을 확인해 주세요.";
-      }
-    }
-
-    function renderHeader() {
-      $("playerBadge").textContent = player.nickname;
-      $("scoreBadge").textContent = `${player.score}점`;
-      $("progressBadge").textContent = `${player.index} / ${QUESTIONS.length}`;
-      $("progressBar").value = player.index;
-      $("roomList").replaceChildren();
-
-      ROOMS.forEach((room, i) => {
-        const tile = document.createElement("div");
-        const done = player.index >= (i + 1) * 5;
-        const active =
-          player.index < QUESTIONS.length &&
-          Math.floor(player.index / 5) === i;
-
-        tile.className = "room" + (done ? " done" : active ? " active" : "");
-        tile.textContent = `${i + 1}번 ${room.title}${done ? " · 완료" : ""}`;
-        $("roomList").append(tile);
-      });
-
-      const completed = Math.floor(player.index / 5);
-      $("secretWords").textContent = completed
-        ? ROOMS.slice(0, completed).map(room => room.word).join(" / ")
-        : "방을 완료하면 암호 조각이 나타납니다.";
-    }
-
-    function renderQuestion() {
-      renderHeader();
-      selected = null;
-      feedbackIndex = null;
-      viewIndex = player.index;
-
-      $("feedback").hidden = true;
-      $("nextButton").hidden = true;
-      $("submitButton").hidden = false;
-      $("gameError").textContent = "";
-
-      const finished = viewIndex >= QUESTIONS.length;
-      $("quizArea").hidden = finished;
-      $("finishArea").hidden = !finished;
-
-      if (finished) {
-        $("finalScore").textContent = `${player.score}점`;
-        $("finalSummary").textContent =
-          `30문제 중 ${player.score / 10}문제 정답 · 6개의 방 탐험 완료`;
-        return;
-      }
-
-      const q = QUESTIONS[viewIndex];
-      const roomNumber = Math.floor(viewIndex / 5);
-      const room = ROOMS[roomNumber];
-
-      $("roomTitle").textContent =
-        `${roomNumber + 1}번 방 · ${room.title} · ` +
-        `${viewIndex % 5 + 1}/5문제 — ${room.mission}`;
-
-      $("questionText").textContent = q.q;
-      $("options").replaceChildren();
-
-      q.o.forEach((text, i) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "option";
-        button.textContent = `${i + 1}. ${text}`;
-        button.setAttribute("aria-pressed", "false");
-
-        button.addEventListener("click", () => {
-          if (busy || feedbackIndex !== null) return;
-          selected = i;
-
-          document.querySelectorAll(".option").forEach((item, j) => {
-            item.classList.toggle("selected", i === j);
-            item.setAttribute("aria-pressed", String(i === j));
-          });
-
-          updateSubmitButton();
-        });
-
-        $("options").append(button);
-      });
-
-      updateSubmitButton();
-    }
-
-    function showFeedback(index, answer) {
-      const q = QUESTIONS[index];
-      const correct = answer === q.a;
-      const box = $("feedback");
-
-      box.replaceChildren();
-      box.className = "feedback " + (correct ? "good" : "bad");
-
-      const heading = document.createElement("strong");
-      heading.textContent = correct
-        ? "정답입니다! 10점을 얻었습니다."
-        : `이번에는 아쉬워요. 정답은 “${q.o[q.a]}”입니다.`;
-
-      const explanation = document.createElement("p");
-      explanation.textContent = q.e;
-      box.append(heading, explanation);
-
-      if ((index + 1) % 5 === 0) {
-        const message = document.createElement("p");
-        const room = ROOMS[Math.floor(index / 5)];
-        message.textContent = `방 탐험 완료! 암호 조각 “${room.word}”를 얻었습니다.`;
-        box.append(message);
-      }
-
-      box.hidden = false;
-      $("submitButton").hidden = true;
-      $("nextButton").hidden = false;
-      $("nextButton").textContent =
-        index === QUESTIONS.length - 1 ? "최종 결과 보기" : "다음 문제";
-
-      updateSubmitButton();
-      $("nextButton").focus();
-    }
-
-    function joinGame(event) {
-      event.preventDefault();
-      $("loginError").textContent = "";
-
-      const name = $("nickname").value.trim();
-      if (!name || name.length > 12) {
-        $("loginError").textContent = "별명을 1~12자로 입력하세요.";
-        return;
-      }
-
-      storageKey = STORAGE_PREFIX + name.toLocaleLowerCase("ko-KR");
-
-      try {
-        const saved = localStorage.getItem(storageKey);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          const valid =
-            parsed &&
-            parsed.nickname === name &&
-            Number.isInteger(parsed.index) &&
-            parsed.index >= 0 &&
-            parsed.index <= QUESTIONS.length &&
-            Number.isInteger(parsed.score) &&
-            parsed.score >= 0 &&
-            parsed.score <= parsed.index * 10;
-
-          player = valid
-            ? parsed
-            : { nickname: name, index: 0, score: 0 };
-        } else {
-          player = { nickname: name, index: 0, score: 0 };
-        }
-      } catch (error) {
-        player = { nickname: name, index: 0, score: 0 };
-        $("loginError").textContent =
-          "이전 기록을 읽지 못해 새 기록으로 시작합니다.";
-      }
-
-      savePlayer();
-      $("loginPanel").hidden = true;
-      $("gamePanel").hidden = false;
-      renderQuestion();
-    }
-
-    function submitAnswer() {
-      if (busy || selected === null || feedbackIndex !== null) return;
-
-      const index = viewIndex;
-      const answer = selected;
-      const q = QUESTIONS[index];
-
-      busy = true;
-      feedbackIndex = index;
-      $("gameError").textContent = "";
-      updateSubmitButton();
-
-      try {
-        player.index = index + 1;
-        if (answer === q.a) player.score += 10;
-        savePlayer();
-        renderHeader();
-        showFeedback(index, answer);
-      } catch (error) {
-        feedbackIndex = null;
-        $("gameError").textContent = "답안을 처리하지 못했습니다. 다시 시도해 주세요.";
-      } finally {
-        busy = false;
-        updateSubmitButton();
-      }
-    }
-
-    function restartGame() {
-      if (!confirm("현재 별명의 점수와 진행 기록을 지우고 처음부터 시작할까요?")) return;
-      player = { nickname: player.nickname, index: 0, score: 0 };
-      savePlayer();
-      renderQuestion();
-    }
-
-    $("joinForm").addEventListener("submit", joinGame);
-    $("submitButton").addEventListener("click", submitAnswer);
-    $("nextButton").addEventListener("click", renderQuestion);
-
-    const restartButton = document.createElement("button");
-    restartButton.type = "button";
-    restartButton.className = "primary wide";
-    restartButton.textContent = "처음부터 다시 하기";
-    restartButton.addEventListener("click", restartGame);
-    $("finishArea").append(restartButton);
+    function updateSubmitButton(){ $("submitButton").disabled=busy||selected===null||feedbackIndex!==null||!player||player.index>=QUESTIONS.length; document.querySelectorAll(".option").forEach(b=>b.disabled=busy||feedbackIndex!==null); }
+    function carSvg(color){ return `<svg viewBox="0 0 120 60" role="img" aria-label="레이싱 자동차"><path d="M18 38 L24 23 Q27 18 37 17 L49 8 L76 8 L91 22 L105 26 L112 37 L108 44 L14 44 Z" fill="${color}" stroke="#17243c" stroke-width="2"/><path d="M43 17 L53 11 L72 11 L83 22 L42 22 Z" fill="#c9f0ff" stroke="#17243c" stroke-width="1.5"/><path d="M7 34 L25 34 L25 40 L7 40 Z" fill="#f5c842" stroke="#17243c" stroke-width="1.5"/><circle cx="34" cy="43" r="9" fill="#17243c"/><circle cx="34" cy="43" r="4" fill="#e7edf5"/><circle cx="91" cy="43" r="9" fill="#17243c"/><circle cx="91" cy="43" r="4" fill="#e7edf5"/><path d="M55 29 L77 29" stroke="#fff" stroke-width="4"/></svg>`; }
+    function renderHeader(){ $("playerBadge").textContent=player.nickname; $("scoreBadge").textContent=`${player.score}점`; $("progressBadge").textContent=`${player.index} / ${QUESTIONS.length}`; $("progressBar").value=player.index; $("roomList").replaceChildren(); ROOMS.forEach((r,i)=>{const t=document.createElement("div");const done=player.index>=(i+1)*5;const active=player.index<30&&Math.floor(player.index/5)===i;t.className="room"+(done?" done":active?" active":"");t.textContent=`${i+1}번 ${r.title}${done?" · 완료":""}`;$("roomList").append(t);});const c=Math.floor(player.index/5);$("secretWords").textContent=c?ROOMS.slice(0,c).map(r=>r.word).join(" / "):"방을 완료하면 암호 조각이 나타납니다."; }
+    function renderQuestion(){renderHeader();selected=null;feedbackIndex=null;viewIndex=player.index;$("feedback").hidden=true;$("nextButton").hidden=true;$("submitButton").hidden=false;$("gameError").textContent="";const finished=viewIndex>=30;$("quizArea").hidden=finished;$("finishArea").hidden=!finished;if(finished){$("finalScore").textContent=`${player.score}점`;$("finalSummary").textContent=`30문제 중 ${player.score/10}문제 정답 · 6개의 방 탐험 완료`;return;}const q=QUESTIONS[viewIndex],rn=Math.floor(viewIndex/5);$("roomTitle").textContent=`${rn+1}번 방 · ${ROOMS[rn].title} · ${viewIndex%5+1}/5문제 — ${ROOMS[rn].mission}`;$("questionText").textContent=q.q;$("options").replaceChildren();q.o.forEach((text,i)=>{const b=document.createElement("button");b.type="button";b.className="option";b.textContent=`${i+1}. ${text}`;b.setAttribute("aria-pressed","false");b.addEventListener("click",()=>{if(busy||feedbackIndex!==null)return;selected=i;document.querySelectorAll(".option").forEach((x,j)=>{x.classList.toggle("selected",i===j);x.setAttribute("aria-pressed",String(i===j));});updateSubmitButton();});$("options").append(b);});updateSubmitButton();}
+    function showFeedback(index,answer){const q=QUESTIONS[index],ok=answer===q.a,box=$("feedback");box.replaceChildren();box.className="feedback "+(ok?"good":"bad");const h=document.createElement("strong");h.textContent=ok?"정답입니다! 10점을 얻었습니다.":`이번에는 아쉬워요. 정답은 “${q.o[q.a]}”입니다.`;const p=document.createElement("p");p.textContent=q.e;box.append(h,p);if((index+1)%5===0){const m=document.createElement("p");m.textContent=`방 탐험 완료! 암호 조각 “${ROOMS[Math.floor(index/5)].word}”를 얻었습니다.`;box.append(m);}box.hidden=false;$("submitButton").hidden=true;$("nextButton").hidden=false;$("nextButton").textContent=index===29?"최종 결과 보기":"다음 문제";updateSubmitButton();$("nextButton").focus();}
+    async function joinGame(event){event.preventDefault();$("loginError").textContent="";const name=$("nickname").value.trim(),code=$("roomCode").value.trim().toUpperCase();if(!name||name.length>12){$("loginError").textContent="별명을 1~12자로 입력하세요.";return;}if(!/^[A-Z0-9_-]{4,20}$/.test(code)){$("loginError").textContent="참여 코드는 영문 대문자·숫자·하이픈으로 4~20자 입력하세요.";return;}if(firebaseConfig.apiKey==="YOUR_API_KEY"||firebaseConfig.projectId==="YOUR_PROJECT_ID"){$("loginError").textContent="먼저 index.html의 firebaseConfig를 Firebase 프로젝트 설정값으로 바꿔 주세요.";return;}$("joinButton").disabled=true;try{const cred=await signInAnonymously(auth);currentUid=cred.user.uid;const roomRef=doc(db,"rooms",code),roomSnap=await getDoc(roomRef);if(!roomSnap.exists()||roomSnap.data().open!==true)throw Error("참여 코드가 없거나 현재 닫혀 있습니다. 코드를 확인하거나 담당 선생님께 문의하세요.");roomCode=code;playerRef=doc(db,"rooms",code,"players",currentUid);const ps=await getDoc(playerRef);if(ps.exists()){const d=ps.data();player={nickname:d.nickname,index:d.index,score:d.score};}else{player={nickname:name,index:0,score:0};await setDoc(playerRef,{nickname:name,index:0,score:0,lastAnswer:-1,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});}if(unsubscribeRanking)unsubscribeRanking();unsubscribeRanking=onSnapshot(collection(db,"rooms",code,"players"),snap=>renderRanking(snap.docs.map(d=>({id:d.id,...d.data()}))),()=>{$("rankingStatus").textContent="순위를 불러오지 못했습니다. Firestore 규칙을 확인하세요.";});$("loginPanel").hidden=true;$("gamePanel").hidden=false;renderQuestion();$("rankingStatus").textContent="실시간 연결됨";}catch(err){$("loginError").textContent=err.message||"입장할 수 없습니다. Firebase 설정을 확인하세요.";}finally{$("joinButton").disabled=false;}}
+    function renderRanking(players){const track=$("raceTrack");track.replaceChildren();if(!players.length){track.innerHTML='<p class="muted">아직 출발한 탐험대가 없습니다.</p>';$("rankingStatus").textContent="참가자를 기다리는 중";return;}players.sort((a,b)=>(b.score||0)-(a.score||0)||(b.index||0)-(a.index||0));const colors=["#e63946","#277da1","#43aa8b","#f9c74f","#845ec2","#f9844a","#577590","#d45087"];players.forEach((p,i)=>{const lane=document.createElement("div");lane.className="race-lane"+(p.id===currentUid?" me":"");const top=document.createElement("div");top.className="race-top";const who=document.createElement("span");who.textContent=`${i+1}위 · ${p.nickname||"탐험대"}${p.id===currentUid?" (나)":""}`;const score=document.createElement("span");score.textContent=`${p.score||0}점`;top.append(who,score);const road=document.createElement("div");road.className="race-road";const car=document.createElement("div");car.className="race-car";car.style.left=`calc(${Math.min(100,Math.max(0,(p.score||0)/300*100))}% - 33px)`;car.innerHTML=carSvg(colors[i%colors.length]);road.append(car);lane.append(top,road);track.append(lane);});$("rankingStatus").textContent=`${players.length}개 탐험대 · 실시간 갱신 중`;}
+    async function submitAnswer(){if(busy||selected===null||feedbackIndex!==null)return;const index=viewIndex,answer=selected,q=QUESTIONS[index];busy=true;feedbackIndex=index;$("gameError").textContent="";updateSubmitButton();try{const nextIndex=index+1,nextScore=player.score+(answer===q.a?10:0);await updateDoc(playerRef,{index:nextIndex,score:nextScore,lastAnswer:answer,updatedAt:serverTimestamp()});player.index=nextIndex;player.score=nextScore;renderHeader();showFeedback(index,answer);}catch(err){feedbackIndex=null;$("gameError").textContent="점수를 저장하지 못했습니다. 인터넷 연결과 Firestore 보안 규칙을 확인해 주세요.";}finally{busy=false;updateSubmitButton();}}
+    function restartGame(){$("gameError").textContent="기록 초기화는 지원하지 않습니다. 교사에게 문의하세요.";}
+    $("joinForm").addEventListener("submit",joinGame);$("submitButton").addEventListener("click",submitAnswer);$("nextButton").addEventListener("click",renderQuestion);const restartButton=document.createElement("button");restartButton.type="button";restartButton.className="primary wide";restartButton.textContent="처음부터 다시 하기";restartButton.addEventListener("click",restartGame);$("finishArea").append(restartButton);
   </script>
 </body>
 </html>
